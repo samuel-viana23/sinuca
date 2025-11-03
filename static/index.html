@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Sinuca na Rede</title>
+  <style>
+    canvas {
+      background: #006400;
+      display: block;
+      margin: auto;
+    }
+  </style>
+</head>
+
+<body>
+  <canvas id="mesa" width="800" height="400"></canvas>
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+  <script>
+    const socket = io();
+    const canvas = document.getElementById("mesa");
+    const ctx = canvas.getContext("2d");
+
+    let bolas = [];
+    let mouse = { x: 0, y: 0 };
+    let arrastando = false;
+    let posInicial = null;
+    let tempoInicial = 0;
+
+    canvas.addEventListener("mousedown", (e) => {
+      const rect = canvas.getBoundingClientRect();
+      posInicial = {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+      };
+      tempoInicial = performance.now();
+      arrastando = true;
+    });
+
+    canvas.addEventListener("mouseup", (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const posFinal = {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+      };
+      const tempoFinal = performance.now();
+      arrastando = false;
+
+      const dx = posInicial.x - posFinal.x;
+      const dy = posInicial.y - posFinal.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const dt = Math.max((tempoFinal - tempoInicial) / 1000, 0.01);
+      const velocidade = dist / dt;
+
+      socket.emit("taco", {
+        mouse: {
+          x: posFinal.x,
+          y: posFinal.y,
+          velocidade: velocidade
+        }
+      });
+    });
+
+    socket.on("estado", (estado) => {
+      bolas = estado;
+      desenhar();
+    });
+
+    function desenhar() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "#006400";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      for (const bola of bolas) {
+        ctx.beginPath();
+        ctx.arc(bola.x, bola.y, 10, 0, 2 * Math.PI);
+        ctx.fillStyle = "white";
+        ctx.fill();
+        ctx.stroke();
+      }
+
+      if (arrastando && bolas.length > 0) {
+        const bola = bolas[0];
+        const dx = bola.x - mouse.x;
+        const dy = bola.y - mouse.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const dirX = dx / dist;
+        const dirY = dy / dist;
+        const comprimento = Math.min(dist, 100);
+
+        const pontaX = bola.x + dirX * comprimento;
+        const pontaY = bola.y + dirY * comprimento;
+
+        // Sombra
+        ctx.beginPath();
+        ctx.moveTo(bola.x, bola.y);
+        ctx.lineTo(pontaX + 3, pontaY + 3);
+        ctx.strokeStyle = "rgba(0,0,0,0.3)";
+        ctx.lineWidth = 8;
+        ctx.stroke();
+
+        // Taco
+        ctx.beginPath();
+        ctx.moveTo(bola.x, bola.y);
+        ctx.lineTo(pontaX, pontaY);
+        ctx.strokeStyle = "#caa472";
+        ctx.lineWidth = 6;
+        ctx.stroke();
+
+        // Ponta
+        ctx.beginPath();
+        ctx.arc(pontaX, pontaY, 5, 0, 2 * Math.PI);
+        ctx.fillStyle = "#4682B4";
+        ctx.fill();
+      }
+    }
+
+    canvas.addEventListener("mousemove", (e) => {
+      const rect = canvas.getBoundingClientRect();
+      mouse = {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+      };
+    });
+  </script>
+</body>
+
+</html>
