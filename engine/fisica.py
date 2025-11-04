@@ -4,7 +4,8 @@ import math
 def aplicar_atrito(velocidade, atrito, dt):
     """Reduz a velocidade com base no atrito e tempo."""
     if velocidade.length() > 0:
-        desaceleracao = velocidade.normalize() * atrito * dt
+        fator = min(velocidade.length(), 1.5)  # quanto mais rápida, mais atrito
+        desaceleracao = velocidade.normalize() * atrito * fator * dt
         velocidade -= desaceleracao
         if velocidade.length() < 0.01:
             velocidade = Vector2(0, 0)

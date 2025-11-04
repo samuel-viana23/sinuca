@@ -50,21 +50,25 @@ def aplicar_taco(data):
     if deslocamento.length() == 0:
         return  # evita divisão por zero
 
-    direcao = deslocamento.normalize()
-    intensidade = min(velocidade, 800)
+    direcao = -deslocamento.normalize()
+    intensidade = min(velocidade, 1000)
     bola_branca = next((b for b in bolas if getattr(b, "cor", "") == "branca"), None)
     if bola_branca:
-        bola_branca.vel = direcao * intensidade * 2
+        bola_branca.vel = direcao * intensidade * 8
 
 def atualizar_jogo():
     """Loop de física e envio de estado para clientes"""
     fps = 60
     dt = 1 / fps
     while True:
-        for bola in bolas:
-            bola.vel = aplicar_atrito(bola.vel, atrito=50, dt=dt)
+        for bola in bolas[:]:  # cópia para permitir remoção
+            bola.vel = aplicar_atrito(bola.vel, atrito=80, dt=dt)
             bola.pos += bola.vel * dt
             mesa.colidir_borda(bola)
+
+            if mesa.verificar_buracos(bola):
+                bolas.remove(bola)
+                continue
 
         for i in range(len(bolas)):
             for j in range(i + 1, len(bolas)):
