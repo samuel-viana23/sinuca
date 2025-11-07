@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { io } from "socket.io-client";
 
-const socket = io("http://192.168.100.150:5000");
+// const socket = io("http://192.168.100.150:5000");
+const socket = io("http://192.168.5.188:5000");
 
 interface Bola {
   x: number;
@@ -20,7 +21,6 @@ function App() {
   const [animacaoTaco, setAnimacaoTaco] = useState<"recuo" | "impacto" | null>(null);
   const [frameTaco, setFrameTaco] = useState(0);
   const [posicaoTacoFixa, setPosicaoTacoFixa] = useState<{ x: number; y: number } | null>(null);
-
   const bolaParada = (bola: Bola): boolean => {
     if (!ultimaPosicao) return true;
     const dx = bola.x - ultimaPosicao.x;
@@ -54,26 +54,15 @@ function App() {
     ctx.fillStyle = "black";
     ctx.fill();
   }
-
   const desenhar = useCallback(
     (estado: Bola[]) => {
       const canvas = canvasRef.current;
       if (!canvas) return;
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
-
-      
       const margemBuraco = 2;
       ctx.fillStyle = "#006400";
       ctx.fillRect(margemBuraco, margemBuraco, canvas.width - margemBuraco * 2, canvas.height - margemBuraco * 2);
-      
-      // bordas visuais (faixas externas)
-      // ctx.fillStyle = "#2f2f2f";
-      // ctx.fillRect(0, 0, canvas.width, margemBuraco); // superior
-      // ctx.fillRect(0, canvas.height - margemBuraco, canvas.width, margemBuraco); // inferior
-      // ctx.fillRect(0, 0, margemBuraco, canvas.height); // esquerda
-      // ctx.fillRect(canvas.width - margemBuraco, 0, margemBuraco, canvas.height); // direita
-      
       const raioBuraco = 15;
       desenharBuracoArco(ctx, 0, 0, raioBuraco, "canto-esq-sup");
       desenharBuracoArco(ctx, canvas.width, 0, raioBuraco, "canto-dir-sup");
@@ -81,7 +70,6 @@ function App() {
       desenharBuracoArco(ctx, canvas.width, canvas.height, raioBuraco, "canto-dir-inf");
       desenharBuracoArco(ctx, canvas.width / 2, 0, raioBuraco, "meio-sup");
       desenharBuracoArco(ctx, canvas.width / 2, canvas.height, raioBuraco, "meio-inf");
-
       estado.forEach((bola) => {
         ctx.beginPath();
         ctx.arc(bola.x, bola.y, 10, 0, 2 * Math.PI);
@@ -89,30 +77,24 @@ function App() {
           bola.cor === "branca" ? "white" : bola.cor === "vermelha" ? "red" : "blue";
         ctx.fill();
       });
-
       const bolaBranca = estado.find((b) => b.cor === "branca");
       if (!bolaBranca) return;
-
       if (mostrarTaco && bolaParada(bolaBranca) && mousePos) {
         const dx = bolaBranca.x - mousePos.x;
         const dy = bolaBranca.y - mousePos.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
         const dirX = dx / dist;
         const dirY = dy / dist;
-
         const distanciaMinima = 20;
         const comprimento = 120;
         const pontaX = bolaBranca.x - dirX * distanciaMinima;
         const pontaY = bolaBranca.y - dirY * distanciaMinima;
         const baseX = pontaX - dirX * comprimento;
         const baseY = pontaY - dirY * comprimento;
-
         if (animacaoTaco) {
-          // deslocamento visual do taco
           const deslocamento = 100;
           const animX = baseX + dirX * deslocamento;
           const animY = baseY + dirY * deslocamento;
-
           ctx.beginPath();
           ctx.moveTo(animX, animY);
           ctx.lineTo(pontaX, pontaY);
@@ -120,28 +102,23 @@ function App() {
           ctx.lineWidth = 8;
           ctx.stroke();
         }
-
-
         ctx.beginPath();
         ctx.moveTo(baseX, baseY);
         ctx.lineTo(pontaX + 3, pontaY + 3);
         ctx.strokeStyle = "rgba(0,0,0,0.3)";
         ctx.lineWidth = 8;
         ctx.stroke();
-
         ctx.beginPath();
         ctx.moveTo(baseX, baseY);
         ctx.lineTo(pontaX, pontaY);
         ctx.strokeStyle = "#caa472";
         ctx.lineWidth = 6;
         ctx.stroke();
-
         ctx.beginPath();
         ctx.arc(pontaX, pontaY, 5, 0, 2 * Math.PI);
         ctx.fillStyle = "#4682B4";
         ctx.fill();
       }
-
       if (carregandoForca) {
         ctx.fillStyle = "gray";
         ctx.fillRect(20, canvas.height - 30, 200, 20);
@@ -150,65 +127,43 @@ function App() {
         ctx.strokeStyle = "black";
         ctx.strokeRect(20, canvas.height - 30, 200, 20);
       }
-
-      // buracos
-      // buracos.forEach((buraco) => {
-      //   ctx.beginPath();
-      //   ctx.arc(buraco.x, buraco.y, 15, 0, 2 * Math.PI);
-      //   ctx.fillStyle = "black";
-      //   ctx.fill();
-      // });
-
     },
     [mostrarTaco, mousePos, carregandoForca, forca]
   );
-
-
   useEffect(() => {
     if (!animacaoTaco || !posicaoTacoFixa || !mousePos) return;
-
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx) return;
-
     let frame = 0;
     const totalFramesRecuo = 20;
     const totalFramesImpacto = 10;
-
     const dx = posicaoTacoFixa.x - mousePos.x;
     const dy = posicaoTacoFixa.y - mousePos.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
     const dirX = dx / dist;
     const dirY = dy / dist;
-
     const distanciaMinima = 20;
     const comprimento = 120;
-
     const animate = () => {
       let deslocamento = 0;
-
       if (animacaoTaco === "recuo") {
         deslocamento = frame * 3;
       } else if (animacaoTaco === "impacto") {
         deslocamento = 60 - frame * 6;
       }
-
       const pontaX = posicaoTacoFixa.x - dirX * distanciaMinima;
       const pontaY = posicaoTacoFixa.y - dirY * distanciaMinima;
       const baseX = pontaX - dirX * (comprimento + deslocamento);
       const baseY = pontaY - dirY * (comprimento + deslocamento);
-
       desenhar(bolas);
-
       ctx.beginPath();
       ctx.moveTo(baseX, baseY);
       ctx.lineTo(pontaX, pontaY);
       ctx.strokeStyle = "#FFD700";
       ctx.lineWidth = 8;
       ctx.stroke();
-
       frame++;
-
       if (animacaoTaco === "recuo" && frame >= totalFramesRecuo) {
         setAnimacaoTaco("impacto");
         setFrameTaco(0);
@@ -216,7 +171,6 @@ function App() {
         setAnimacaoTaco(null);
         setFrameTaco(0);
         setPosicaoTacoFixa(null);
-
         socket.emit("taco", {
           mouse: {
             x: posicaoTacoFixa.x - dirX * 10,
@@ -226,7 +180,6 @@ function App() {
             inicioY: posicaoTacoFixa.y,
           },
         });
-
         setForca(0);
       } else {
         requestAnimationFrame(animate);
@@ -235,8 +188,6 @@ function App() {
 
     requestAnimationFrame(animate);
   }, [animacaoTaco, posicaoTacoFixa, mousePos, bolas, desenhar, forca]);
-
-
   useEffect(() => {
     socket.on("estado", (estado: Bola[]) => {
       if (estado.length > 0) {
@@ -250,7 +201,6 @@ function App() {
       desenhar(estado);
     });
   }, [desenhar]);
-
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.code === "Space" && !carregandoForca) {
@@ -258,7 +208,6 @@ function App() {
         setForca(0);
       }
     };
-
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.code === "Space" && carregandoForca && ultimaPosicao && mousePos) {
         setCarregandoForca(false);
@@ -269,7 +218,6 @@ function App() {
         );
       }
     };
-
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
     return () => {
@@ -277,7 +225,6 @@ function App() {
       window.removeEventListener("keyup", handleKeyUp);
     };
   }, [carregandoForca, mousePos, ultimaPosicao, forca]);
-
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (carregandoForca) {
@@ -299,22 +246,17 @@ function App() {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
     if (!canvas || !ctx) return;
-
     const dx = posicao.x - mouse.x;
     const dy = posicao.y - mouse.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
     const dirX = dx / dist;
     const dirY = dy / dist;
-
     const distanciaMinima = 20;
     const comprimento = 120;
-
     let frame = 0;
     let fase: "recuo" | "impacto" = "recuo";
-
     const totalFramesRecuo = 20;
     const totalFramesImpacto = 10;
-
     const animar = () => {
       let deslocamento = 0;
 
@@ -323,45 +265,32 @@ function App() {
       } else {
         deslocamento = 40 - frame * 4; // avanço rápido
       }
-
       const pontaX = posicao.x - dirX * distanciaMinima;
       const pontaY = posicao.y - dirY * distanciaMinima;
-
-      // desloca o taco inteiro mantendo o comprimento
       const offsetX = dirX * deslocamento;
       const offsetY = dirY * deslocamento;
-
       const baseX = pontaX - dirX * comprimento + offsetX;
       const baseY = pontaY - dirY * comprimento + offsetY;
       const pontaAnimX = pontaX + offsetX;
       const pontaAnimY = pontaY + offsetY;
-
       desenhar(bolas);
-
-      // sombra
       ctx.beginPath();
       ctx.moveTo(baseX, baseY);
       ctx.lineTo(pontaAnimX + 3, pontaAnimY + 3);
       ctx.strokeStyle = "rgba(0,0,0,0.3)";
       ctx.lineWidth = 8;
       ctx.stroke();
-
-      // corpo do taco
       ctx.beginPath();
       ctx.moveTo(baseX, baseY);
       ctx.lineTo(pontaAnimX, pontaAnimY);
       ctx.strokeStyle = "#FFD700";
       ctx.lineWidth = 6;
       ctx.stroke();
-
-      // ponta azul
       ctx.beginPath();
       ctx.arc(pontaAnimX, pontaAnimY, 5, 0, 2 * Math.PI);
       ctx.fillStyle = "#4682B4";
       ctx.fill();
-
       frame++;
-
       if (fase === "recuo" && frame >= totalFramesRecuo) {
         fase = "impacto";
         frame = 0;
@@ -382,10 +311,8 @@ function App() {
         requestAnimationFrame(animar);
       }
     };
-
     requestAnimationFrame(animar);
   };
-
   return (
     <canvas
       ref={canvasRef}

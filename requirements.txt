@@ -2,3 +2,6 @@ pygame
 flask
 flask-socketio
 eventlet
+PyQt5
+requests
+datetime

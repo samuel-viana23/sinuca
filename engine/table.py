@@ -10,7 +10,7 @@ class Mesa:
 
         # limites internos da área jogável
         self.limite_esquerdo = 1
-        self.limite_direito = self.largura + self.margem_buraco
+        self.limite_direito = self.largura 
         self.limite_superior = 1
         self.limite_inferior = self.altura
 
@@ -21,7 +21,7 @@ class Mesa:
             Vector2(self.largura + 2, 2),
             Vector2(2, self.altura + 2),
             Vector2((self.largura / 2) + 2, self.altura + 2),
-            Vector2(self.largura + 2, self.altura + 2),
+            Vector2(self.largura + 4, self.altura + 4),
         ]
 
 

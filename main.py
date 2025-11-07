@@ -8,34 +8,26 @@ import eventlet
 import time
 import pygame
 
-app = Flask(__name__, static_folder="sinuca-react/build", static_url_path="/")
+# app = Flask(__name__, static_folder="sinuca-react/build", static_url_path="/")
+app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 mesa = Mesa(800, 400)
 bolas = [
     Bola((400, 200), (0, 0), "branca"),   # bola branca (interativa)
     Bola((10, 180), (0, 0), "vermelha"),
-    Bola((10, 200), (0, 0), "vermelha"),
+    Bola((10, 210), (0, 0), "vermelha"),
     Bola((180, 10), (0, 0), "vermelha"),
     Bola((180, 390), (0, 0), "vermelha"),
-    Bola((790, 200), (0, 0), "azul"),
-    Bola((790, 195), (0, 0), "azul"),
+    Bola((790, 180), (0, 0), "azul"),
+    Bola((790, 210), (0, 0), "azul"),
     Bola((600, 390), (0, 0), "azul"),
     Bola((600, 10), (0, 0), "azul"),
 ]
 taco = Taco()
 
-@app.route("/")
-def index():
-    return send_from_directory(app.static_folder, "index.html")
-
-@app.route("/<path:path>")
-def static_proxy(path):
-    return send_from_directory(app.static_folder, path)
-
 @socketio.on("taco")
 def aplicar_taco(data):
-    # print("Dados recebidos do cliente:", data)
     try:
         x = float(data["mouse"]["x"])
         y = float(data["mouse"]["y"])
@@ -51,7 +43,7 @@ def aplicar_taco(data):
         return  # evita divisão por zero
 
     direcao = -deslocamento.normalize()
-    intensidade = min(velocidade, 1000)
+    intensidade = min(velocidade, 100)
     bola_branca = next((b for b in bolas if getattr(b, "cor", "") == "branca"), None)
     if bola_branca:
         bola_branca.vel = direcao * intensidade * 8
@@ -62,13 +54,16 @@ def atualizar_jogo():
     dt = 1 / fps
     while True:
         for bola in bolas[:]:  # cópia para permitir remoção
-            bola.vel = aplicar_atrito(bola.vel, atrito=80, dt=dt)
+            bola.vel = aplicar_atrito(bola.vel, atrito=100, dt=dt)
             bola.pos += bola.vel * dt
             mesa.colidir_borda(bola)
 
             if mesa.verificar_buracos(bola):
+                id_bola = bolas.index(bola)  # pega o índice da bola atual
+                socketio.emit("bola_caiu", {"id": id_bola, "cor": bola.cor})
                 bolas.remove(bola)
                 continue
+
 
         for i in range(len(bolas)):
             for j in range(i + 1, len(bolas)):
